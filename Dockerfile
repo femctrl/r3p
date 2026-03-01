@@ -1,61 +1,33 @@
 FROM ubuntu:20.04
-ENV DEBIAN_FRONTEND=noninteractive RESOLUTION=1707x1607 PORT=8080 VNC_PASSWORD=changeme
-RUN apt-get update && apt-get install -y --no-install-recommends x11vnc xvfb fluxbox python3-pip git supervisor wget ca-certificates xauth && rm -rf /var/lib/apt/lists/*
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV RESOLUTION=1707x1607
+ENV PORT=8080
+ENV DISPLAY=:0
+ENV VNC_PASSWORD=changeme
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    xvfb x11vnc fluxbox supervisor \
+    python3 python3-pip git wget ca-certificates xauth && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN pip3 install --no-cache-dir websockify
-RUN git clone --depth 1 https://github.com/novnc/noVNC.git /opt/noVNC && git clone --depth 1 https://github.com/novnc/websockify /opt/noVNC/utils/websockify || true
-RUN useradd -m -s /bin/bash novnc && mkdir -p /home/novnc/.vnc && chown -R novnc:novnc /home/novnc
-RUN mkdir -p /etc/supervisor/conf.d
-RUN bash -lc 'cat > /etc/supervisor/supervisord.conf <<EOF
-[supervisord]
-nodaemon=true
 
-[program:xvfb]
-command=/usr/bin/Xvfb :0 -screen 0 ${RESOLUTION}x24
-autostart=true
-autorestart=true
-priority=10
-stdout_logfile=/dev/stdout
-stderr_logfile=/dev/stderr
+RUN git clone --depth 1 https://github.com/novnc/noVNC.git /opt/noVNC
 
-[program:fluxbox]
-command=/usr/bin/fluxbox -display :0
-autostart=true
-autorestart=true
-priority=20
-stdout_logfile=/dev/stdout
-stderr_logfile=/dev/stderr
+RUN useradd -m -s /bin/bash novnc && \
+    mkdir -p /home/novnc/.vnc && \
+    chown -R novnc:novnc /home/novnc
 
-[program:x11vnc]
-command=/usr/bin/x11vnc -display :0 -forever -shared -rfbport 5900 -rfbauth /home/novnc/.vnc/passwd
-autostart=true
-autorestart=true
-priority=30
-stdout_logfile=/dev/stdout
-stderr_logfile=/dev/stderr
+RUN printf "[supervisord]\nnodaemon=true\n\n[program:xvfb]\ncommand=/usr/bin/Xvfb :0 -screen 0 1707x1607x24\nautostart=true\nautorestart=true\n\n[program:fluxbox]\ncommand=/usr/bin/fluxbox -display :0\nautostart=true\nautorestart=true\n\n[program:x11vnc]\ncommand=/usr/bin/x11vnc -display :0 -forever -shared -rfbport 5900 -rfbauth /home/novnc/.vnc/passwd\nautostart=true\nautorestart=true\n\n[program:novnc]\ncommand=/usr/local/bin/novnc.sh\nautostart=true\nautorestart=true\n" > /etc/supervisor/supervisord.conf
 
-[program:novnc]
-command=/usr/local/bin/novnc.sh
-autostart=true
-autorestart=true
-priority=40
-stdout_logfile=/dev/stdout
-stderr_logfile=/dev/stderr
-EOF'
-RUN bash -lc 'cat > /usr/local/bin/novnc.sh <<'SH'
-#!/bin/bash
-exec websockify --web=/opt/noVNC ${PORT} localhost:5900
-SH
-RUN bash -lc 'cat > /usr/local/bin/startup.sh <<'SH'
-#!/bin/bash
-mkdir -p /home/novnc/.vnc
-if [ -n "$VNC_PASSWORD" ]; then
-  x11vnc -storepasswd "$VNC_PASSWORD" /home/novnc/.vnc/passwd
-  chmod 600 /home/novnc/.vnc/passwd
-fi
-chown -R novnc:novnc /home/novnc
-export DISPLAY=:0
-exec /usr/bin/supervisord -n -c /etc/supervisor/supervisord.conf
-SH
-RUN chmod +x /usr/local/bin/novnc.sh /usr/local/bin/startup.sh
+RUN printf "#!/bin/bash\nexec websockify --web=/opt/noVNC ${PORT} localhost:5900\n" > /usr/local/bin/novnc.sh && \
+    chmod +x /usr/local/bin/novnc.sh
+
+RUN printf "#!/bin/bash\nmkdir -p /home/novnc/.vnc\nx11vnc -storepasswd \"$VNC_PASSWORD\" /home/novnc/.vnc/passwd\nchmod 600 /home/novnc/.vnc/passwd\nchown -R novnc:novnc /home/novnc\nexec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf\n" > /usr/local/bin/startup.sh && \
+    chmod +x /usr/local/bin/startup.sh
+
 EXPOSE 8080
+
 CMD ["/usr/local/bin/startup.sh"]
