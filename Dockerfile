@@ -1,4 +1,4 @@
-FROM fredblgr/ubuntu-novnc:20.04
+FROM dehim/ubuntu-novnc:latest
 
 ENV RESOLUTION=1707x1607
 
