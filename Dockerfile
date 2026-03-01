@@ -3,19 +3,12 @@ FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
-    apt-get install -y curl ca-certificates python3 && \
+    apt-get install -y curl ca-certificates bash && \
     rm -rf /var/lib/apt/lists/*
 
-RUN curl -L https://github.com/owenthereal/upterm/releases/latest/download/upterm_linux_amd64.tar.gz -o upterm.tar.gz && \
-    tar -xzf upterm.tar.gz && \
-    mv upterm /usr/local/bin/upterm && \
-    chmod +x /usr/local/bin/upterm && \
-    rm upterm.tar.gz
-
-WORKDIR /app
-
-RUN echo keepalive > index.html
+RUN curl -L https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.x86_64 -o /usr/local/bin/ttyd && \
+    chmod +x /usr/local/bin/ttyd
 
 EXPOSE 8080
 
-CMD sh -c "upterm host --server wss://uptermd.upterm.dev --accept --force-command bash & python3 -m http.server ${PORT:-8080}"
+CMD sh -c "ttyd -p ${PORT:-8080} -W bash"
