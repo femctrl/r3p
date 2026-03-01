@@ -1,4 +1,4 @@
-FROM dehim/ubuntu-novnc:latest
+FROM fredblgr/framac-novnc:latest
 
 ENV RESOLUTION=1707x1607
 
