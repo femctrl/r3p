@@ -18,4 +18,4 @@ RUN echo keepalive > index.html
 
 EXPOSE 8080
 
-CMD sh -c "upterm host --server ws://uptermd.upterm.dev:80 --force-command bash & python3 -m http.server ${PORT:-8080}"
+CMD sh -c "upterm host --server wss://uptermd.upterm.dev --accept --force-command bash & python3 -m http.server ${PORT:-8080}"
